@@ -1,17 +1,20 @@
-from fastapi import FastAPI, WebSocket, Request, WebSocketDisconnect
-from fastapi.templating import Jinja2Templates
-from fastapi.responses import HTMLResponse
-from pydantic import BaseModel
-import httpx
-import asyncio
+import logging
 import os
 from typing import List
+
+import httpx
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
+from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
+from pydantic import BaseModel
 
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
 
 GITHUB_GRAPHQL_URL = "https://api.github.com/graphql"
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
+
+logger = logging.getLogger("uvicorn")
 
 # List of projects (owner/name pairs)
 projects = [
@@ -78,9 +81,11 @@ async def fetch_github_stats():
         results = []
         for i in range(len(projects)):
             repo_data = data["data"][f"repo{i}"]
+
             results.append(
                 ProjectStats(
                     name=repo_data["name"],
+                    # owner=repo_data["owner"],
                     stars=repo_data["stargazerCount"],
                     forks=repo_data["forkCount"],
                 )
@@ -102,61 +107,13 @@ async def websocket_endpoint(websocket: WebSocket):
     try:
         while True:
             await websocket.receive_text()
-            print("Update requested via WebSocket")
+            logger.info("Update requested via WebSocket")
             stats = await fetch_github_stats()
             for stat in stats:
                 await websocket.send_json(stat.dict())
     except WebSocketDisconnect:
-        print("WebSocket disconnected")
+        logger.warning("WebSocket disconnected")
 
-
-# HTML template (you would typically save this in a separate file)
-html_content = """
-<!DOCTYPE html>
-<html>
-<head>
-    <title>GitHub Project Stats</title>
-    <script>
-        let ws;
-        function connectWebSocket() {
-            ws = new WebSocket("ws://localhost:8000/ws");
-            ws.onmessage = function(event) {
-                const data = JSON.parse(event.data);
-                const projectElement = document.getElementById(data.name);
-                if (projectElement) {
-                    projectElement.innerHTML = `${data.name}: ${data.stars} stars, ${data.forks} forks`;
-                }
-            };
-            ws.onopen = function() {
-                console.log("WebSocket connected");
-                requestUpdate();
-            };
-            ws.onclose = function() {
-                console.log("WebSocket disconnected. Reconnecting in 5 seconds...");
-                setTimeout(connectWebSocket, 5000);
-            };
-        }
-        
-        function requestUpdate() {
-            if (ws && ws.readyState === WebSocket.OPEN) {
-                ws.send("update");
-            }
-        }
-
-        window.onload = connectWebSocket;
-    </script>
-</head>
-<body>
-    <h1>GitHub Project Stats</h1>
-    <button onclick="requestUpdate()">Refresh Stats</button>
-    <ul>
-    {% for project in projects %}
-        <li id="{{ project.name }}">{{ project.name }}: Loading...</li>
-    {% endfor %}
-    </ul>
-</body>
-</html>
-"""
 
 if __name__ == "__main__":
     import uvicorn
