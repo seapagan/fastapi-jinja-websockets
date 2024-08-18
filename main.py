@@ -102,6 +102,7 @@ async def websocket_endpoint(websocket: WebSocket):
     try:
         while True:
             await websocket.receive_text()
+            print("Update requested via WebSocket")
             stats = await fetch_github_stats()
             for stat in stats:
                 await websocket.send_json(stat.dict())

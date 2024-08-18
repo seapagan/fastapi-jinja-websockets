@@ -5,7 +5,7 @@
     <script>
         let ws;
         function connectWebSocket() {
-            ws = new WebSocket("ws://localhost:8000/ws");
+            ws = new WebSocket("ws://" + window.location.host + "/ws");
             ws.onmessage = function(event) {
                 const data = JSON.parse(event.data);
                 const projectElement = document.getElementById(data.name);
@@ -26,6 +26,9 @@
         function requestUpdate() {
             if (ws && ws.readyState === WebSocket.OPEN) {
                 ws.send("update");
+                console.log("Update requested");
+            } else {
+                console.log("WebSocket is not open. Cannot send update request.");
             }
         }
 
