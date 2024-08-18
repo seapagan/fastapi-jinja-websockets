@@ -28,6 +28,7 @@ projects = [
 
 
 class ProjectStats(BaseModel):
+    owner: str
     name: str
     stars: int
     forks: int
@@ -40,6 +41,9 @@ def generate_graphql_query(projects: List[dict]) -> tuple[str, dict]:
     for i, project in enumerate(projects):
         query_part = f"""
         repo{i}: repository(owner: $owner{i}, name: $name{i}) {{
+            owner {{
+                login
+            }}
             name
             stargazerCount
             forkCount
@@ -84,8 +88,8 @@ async def fetch_github_stats():
 
             results.append(
                 ProjectStats(
+                    owner=repo_data["owner"]["login"],
                     name=repo_data["name"],
-                    # owner=repo_data["owner"],
                     stars=repo_data["stargazerCount"],
                     forks=repo_data["forkCount"],
                 )

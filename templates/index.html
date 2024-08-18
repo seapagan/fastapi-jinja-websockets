@@ -10,7 +10,7 @@
                 const data = JSON.parse(event.data);
                 const projectElement = document.getElementById(data.name);
                 if (projectElement) {
-                    projectElement.innerHTML = `${data.name}: ${data.stars} stars, ${data.forks} forks`;
+                    projectElement.innerHTML = `${data.owner}/${data.name}: ${data.stars} stars, ${data.forks} forks`;
                 }
             };
             ws.onopen = function() {
@@ -40,7 +40,7 @@
     <button onclick="requestUpdate()">Refresh Stats</button>
     <ul>
     {% for project in projects %}
-        <li id="{{ project.name }}">{{ project.name }}: Loading...</li>
+            <li id="{{ project.name }}">{{ project.owner }}/{{ project.name }}: Loading...</li>
     {% endfor %}
     </ul>
 </body>
