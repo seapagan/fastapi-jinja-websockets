@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>GitHub Project Stats</title>
+    <script>
+        let ws;
+        function connectWebSocket() {
+            ws = new WebSocket("ws://localhost:8000/ws");
+            ws.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                const projectElement = document.getElementById(data.name);
+                if (projectElement) {
+                    projectElement.innerHTML = `${data.name}: ${data.stars} stars, ${data.forks} forks`;
+                }
+            };
+            ws.onopen = function() {
+                console.log("WebSocket connected");
+                requestUpdate();
+            };
+            ws.onclose = function() {
+                console.log("WebSocket disconnected. Reconnecting in 5 seconds...");
+                setTimeout(connectWebSocket, 5000);
+            };
+        }
+        
+        function requestUpdate() {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send("update");
+            }
+        }
+
+        window.onload = connectWebSocket;
+    </script>
+</head>
+<body>
+    <h1>GitHub Project Stats</h1>
+    <button onclick="requestUpdate()">Refresh Stats</button>
+    <ul>
+    {% for project in projects %}
+        <li id="{{ project.name }}">{{ project.name }}: Loading...</li>
+    {% endfor %}
+    </ul>
+</body>
+</html>
